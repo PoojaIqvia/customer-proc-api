@@ -1,0 +1,17 @@
+%dw 2.0
+
+type auto_0023feea_c54f_4dfe_9811_e98283c381dc_Input_Payload = {
+  firstName: String, 
+  lastName: String, 
+  address: {
+    country: String, 
+    city: String, 
+    street: String, 
+    postalCode: String, 
+    houseNumber: String, 
+    state: String, 
+    _?: Any
+  }, 
+  _?: Any
+}
+

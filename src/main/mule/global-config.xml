@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation=" http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd  http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+    <http:listener-config name="customer-proc-api-httpListenerConfig">
+        <http:listener-connection host="${http.host}" port="${http.port}" connectionIdleTimeout="${http.listner.conn.timeout}" />
+    </http:listener-config>
+    <apikit:config name="customer-proc-api-config" api="resource::0d43c0a8-b94f-4794-92d7-ff2ea43f8160:customer-proc-api:1.0.1:raml:zip:customer-proc-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <configuration-properties doc:name="Configuration properties" doc:id="f371c008-e00d-4a37-af8c-77d192ac0eb7" file="config/customer-proc-api.${mule.env}.yaml" />
+    <global-property doc:name="Global Property" doc:id="aafb8291-9625-4200-9bd2-1c9a4a555fb0" name="mule.env" value="dev" />
+    <salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="4bd3fc5a-758a-44f2-95a0-42afe349c1f4">
+        <salesforce:basic-connection username="${salesforce.username}" password="${secure::salesforce.password}" securityToken="${secure::salesforce.securityToken}" url="${salesforce.authURL}">
+            <reconnection>
+                <reconnect frequency="${salesforce.frequency}" count="${salesforce.reconnAttmpts}" />
+            </reconnection>
+        </salesforce:basic-connection>
+    </salesforce:sfdc-config>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="298ecba0-1e44-46f1-a4ee-204c774de1b8" file="config\secure\customer-proc-api-${mule.env}-secure.yaml" key="${secure.key}">
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<global-property doc:name="Global Property" doc:id="4ad8cc6f-edc3-4c7b-b3d7-889d160872ec" name="secure.key" value="abcdefg123456" />
+</mule>

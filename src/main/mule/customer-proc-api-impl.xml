@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	
+	<flow name="customer-common-implFlow" doc:id="dbd8f8bb-195e-4e32-a17c-34cddcf90f31" >
+		<ee:transform doc:name="PickObjectList" doc:id="c1a13050-9306-486a-8019-b170c95a3015" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+ if (vars.deleteCustomerFlag == 'Success') 
+	 readUrl("classpath://deleteCustomer.json", "application/json")	 	 
+else
+     readUrl("classpath://getCustomer.json", "application/json")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<try doc:name="Try" doc:id="3f4aa9b6-a3ec-4a8b-b049-41a9278b1499">
+				<flow-ref doc:name="parallelForEachSub_Flow" doc:id="8c441fb5-6f40-487f-ae53-11f8d06f8f0c" name="parallelForEachSub_Flow" />
+				<error-handler>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="690525ad-a16a-4465-b097-87fb1bab0471" type="ANY">
+						<logger level="INFO" doc:name="Error Logger" doc:id="821e59da-e6ba-4fe7-ad59-755953026fed" message='#["ERROR OCCURED during process please check"]' />
+					</on-error-continue>
+				</error-handler>
+			</try>
+	</flow>
+	<sub-flow name="parallelForEachSub_Flow" doc:id="548d85c4-b357-40a5-a1ca-3cd9e6ef309b" >
+		<parallel-foreach doc:name="Parallel For Each" doc:id="b8caab3b-df06-4e28-a934-c0baa775825b" collection="#[payload.objects]" maxConcurrency="${id.ParallelForEachMaxConcurrency}">
+			<set-variable value="#[payload]" doc:name="objectInfo" doc:id="88e077a4-e56b-4294-8bab-611baa47e3af" variableName="objectInfo" />
+			<logger level="DEBUG" doc:name="objectName Logger" doc:id="61a147ba-9d86-4370-af8e-6e976097265d" message='#["\n object Name: " ++ vars.objectInfo.objectName]' />
+			<ee:transform doc:name="GetQuery" doc:id="a5a98913-ae3b-4230-875c-ed30c6c23492" >
+				<ee:message />
+				<ee:variables >
+					<ee:set-variable variableName="query" ><![CDATA[%dw 2.0
+output application/java
+var id =  "'" ++  vars.customerId as String ++ "'"
+---    
+vars.objectInfo.Query replace '<Customer_Id>' with id     ]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<logger level="DEBUG" doc:name="LogQuery" doc:id="8b4e5803-b38e-4417-b1be-694e2f47aeb1" message='#["************Executing Query************* " ++ vars.query]'/>
+			<salesforce:query doc:name="GetAllRecords" doc:id="f79ac5b3-fae8-49a6-923e-80eb9cd1200f" config-ref="Salesforce_Config" target="records" targetValue="#[payload filter(isEmpty($.Id) == false)]" >
+				<salesforce:salesforce-query ><![CDATA[#[vars.query]]]></salesforce:salesforce-query>
+			</salesforce:query>
+			<choice doc:name="Choice" doc:id="d3921687-4048-45fa-a4e9-44243b1f9f31" >
+				<when expression="#[vars.deleteCustomerFlag == 'Success']">
+					<flow-ref doc:name="deleteCustomerSub_Flow" doc:id="a02bbe99-2ccf-4c43-805c-ab9d8ce77c77" name="deleteCustomerSub_Flow" />
+				</when>
+				<when expression="#[vars.updateCustomerFlag == 'Success']">
+					<flow-ref doc:name="updateCustomerSub_Flow" doc:id="3981e61b-8f63-4d60-9963-35d58a718b28" name="updateCustomerSub_Flow"/>
+				</when>
+				<otherwise>
+					<logger level="INFO" doc:name="GetRecordsLogger" doc:id="236c9360-97ab-4f2c-8038-b134bb43bba1" message="#[vars.records]"/>
+				</otherwise>
+			</choice>
+		</parallel-foreach>
+	</sub-flow>
+	
+	</mule>

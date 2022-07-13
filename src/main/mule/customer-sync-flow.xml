@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	
+	<flow name="customer-sync-flowFlow" doc:id="f05c4d05-ff22-4bb5-bac7-25d172140f44" >
+		<scheduler doc:name="PeriodicSync" doc:id="cf9ead59-565e-4ec4-b7cb-9e5c9d9883cb" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="10" timeUnit="DAYS" startDelay="220"/>
+			</scheduling-strategy>
+		</scheduler>
+		<os:retrieve doc:name="Retrieve lastUpdateTimestamp" doc:id="fbca686c-9727-455c-9bb4-2bf1bb4e0ce6" key="lastUpdateTimestampKey" target="lastUpdateTimestamp" targetValue="#[payload as String]">
+			<os:default-value ><![CDATA[#[now() - |P1D|]]]></os:default-value>
+		</os:retrieve>
+		<salesforce:query doc:name="Query Sfdc" doc:id="69a85963-1abe-4af8-bad9-bfb6d3452ae5" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT Id,Name,LastModifiedDate FROM Contact WHERE LastModifiedDate > :lastUpdateTimestamp]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	lastUpdateTimestamp : vars.lastUpdateTimestamp
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<os:store doc:name="Store lastUpdateTimestamp" doc:id="a01c6519-5d2d-4d8a-9276-6084834ce7bb" key="lastUpdateTimestampKey">
+			<os:value ><![CDATA[#[now()]]]></os:value>
+		</os:store>
+		<batch:job jobName="customer-sync-flowBatch_Job" doc:id="dcda9f28-2e57-4494-947e-d8a436f3951b" >
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="e9e38654-10e0-4b05-a518-270eed8bbd7b" >
+					<logger level="INFO" doc:name="RecentlyModifiedLogger" doc:id="98762baf-2cb7-45e3-8d6a-c5f3bce32a93" message="#['Contact recently modified: ' ++ write(payload, &quot;application/json&quot;,  {&quot;indent&quot;: &quot;false&quot;})]" />
+				</batch:step>
+			</batch:process-records>
+		</batch:job>
+	</flow>
+</mule>

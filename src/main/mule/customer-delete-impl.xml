@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp" xmlns:iqvia="http://www.mulesoft.org/schema/mule/iqvia"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/iqvia http://www.mulesoft.org/schema/mule/iqvia/current/mule-iqvia.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd">
+	
+	<sub-flow name="deleteCustomerSub_Flow" doc:id="c9062cb2-7a04-4405-b16c-bc36a9d78486" >
+		<ee:transform doc:name="mapRecords" doc:id="98072621-4814-478f-b8ab-d6e93cd4e159" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+vars.records filter(isEmpty($.Id) == false) map(item,index) -> {
+	'Id': item.Id
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+		<logger level="DEBUG" doc:name="ResponseLogger" doc:id="6bc6453e-8f6b-4b90-82d2-56a8a79b34b5" message="#[%dw 2.0
+output application/json
+---
+vars.objectInfo.objectName default ''  ++ '/' ++ vars.objectInfo.bulkobjectName default '' ++ ': ' ++  sizeOf(vars.records)]"/>
+		<choice doc:name="Choice" doc:id="90632565-4f1d-49fa-8c4f-8c98da15c501" >
+			<when expression='#[sizeOf(vars.records default "") == 0]' >
+				<logger level="INFO" doc:name="NoRecordsLogger" doc:id="59c85198-d056-4945-adfd-d768a632849e" message='#["\n No Records Found"]' />
+			</when>
+			<when expression="#[(not isEmpty(vars.records)) and (sizeOf(vars.records default &quot;&quot;) &lt;= p('idLimit'))]" >
+				<salesforce:delete doc:name="Delete200Ids" doc:id="d5d299ed-54fa-4163-ad3f-f3e37778de2a" config-ref="Salesforce_Config" >
+					<salesforce:ids ><![CDATA[#[payload.Id]]]></salesforce:ids>
+				</salesforce:delete>
+				<logger level="INFO" doc:name="DeletionLogger" doc:id="e2b26ddd-447d-431e-a172-eda4ab12f5dd" message="Deletion Successful" />
+			</when>
+			<otherwise >
+				<logger level="DEBUG" doc:name="PayloadLogger" doc:id="fb4e84d5-6f2d-4e79-b0b8-016000f247a3" message="#[payload]"/>
+				<foreach doc:name="For Each" doc:id="fc4df0e8-9c10-4975-91cf-19a478f8969e" collection="#[payload]" batchSize="${deleteBatchSize}" >
+					<try doc:name="Try" doc:id="d981bc57-bc7b-4446-9ede-c703dcc6b105" >
+						<ee:transform doc:name="payload" doc:id="e973f6ae-5bb0-441e-8269-2ee24f3f472b" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+
+flatten(payload)]]></ee:set-payload>
+							</ee:message>
+							<ee:variables >
+							</ee:variables>
+						</ee:transform>
+						<salesforce:create-job-bulk-api-v2 objectType="#[vars.objectInfo.bulkobjectName]" operation="hardDelete" doc:name="Create job bulk api v 2" doc:id="6970d2e6-1a45-4567-a1e4-5cd5ec042806" config-ref="Salesforce_Config" />
+						<error-handler >
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b6d3a258-e7ef-419f-8d74-50e552a312b5" type="ANY" >
+								<ee:transform doc:name="ErrorMsg" doc:id="9d7e8bb6-8387-4759-a581-add705139399" >
+									<ee:message >
+										<ee:set-payload ><![CDATA[error]]></ee:set-payload>
+									</ee:message>
+								</ee:transform>
+								<logger level="ERROR" doc:name="ErrorLogger" doc:id="6219c957-8e1a-4d24-adaf-fa655556511f" message="#[payload]"/>
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</foreach>
+				<logger level="INFO" doc:name="ContactLogger" doc:id="ce291158-0920-4c87-9088-f35ea6bba011" message="**********AFTER DELETING CONTACTS**************** " />
+				<logger level="DEBUG" doc:name="PayloadLogger" doc:id="d41135d4-ae3f-4715-8c65-2ddfcc1efb96" message="#[output application/json --- payload]"/>
+			</otherwise>
+		</choice>
+	</sub-flow>
+</mule>

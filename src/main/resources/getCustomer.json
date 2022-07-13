@@ -1,0 +1,9 @@
+{
+    "objects": [
+        {
+            "objectName": "Contact",
+            "Query": "SELECT FirstName,LastName FROM Contact WHERE  Id= <Customer_Id>",
+            "bulkobjectName": "Contact"
+        }
+    ]
+}

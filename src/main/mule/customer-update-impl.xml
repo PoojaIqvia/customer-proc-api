@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	<sub-flow name="updateCustomerSub_Flow" doc:id="c59ef6e4-27f4-443d-8f5c-ba9871179628" >
+		<try doc:name="Try" doc:id="eab881c0-6fe4-4f83-855c-11a848963aed" >
+			<ee:transform doc:name="updatePayload" doc:id="b85ca33c-fe15-464e-b11b-32ccdd73538d">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="updateRecords"><![CDATA[%dw 2.0
+output application/java
+var requestId = vars.requestId
+---
+
+[{
+	"Alias": "Deleted",
+	"Email":  requestId ++ '@mailinator.com',
+	"FirstName" : payload.firstName,
+	"LastName": payload.lastName,
+	"MailingAddress.street": payload.houseNumber ++ payload.street,
+	"MailingAddress.city" : payload.city,
+	"MailingAddress.state": payload.state,
+	"MailingAddress.country": payload.country,
+	"MailingAddress.postalCode": payload.postalCode,
+	"MailingAddress.longitude" : payload.longitude default "",
+	"MailingAddress.latitude": payload.latitude default "",
+	"MailingAddress.geocodeAccuracy": payload.geocodeAccuracy default ""
+}]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+			<salesforce:update type="Contact" doc:name="Update Contact" doc:id="d65c55c7-077b-4bb5-a7d1-25b4287b5c15" config-ref="Salesforce_Config" target="updatedResp">
+			<salesforce:records><![CDATA[#[vars.updateRecords]]]></salesforce:records>
+		</salesforce:update>
+			<logger level="DEBUG" doc:name="UpdateLogger" doc:id="5b4c4379-6fb5-421c-a86f-f2ed0ceaf1ca" message="#[output application/json --- vars.updatedResp]" />
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="4414fe08-958c-489d-b7ac-db22cfc0c84b" type="ANY">
+					<ee:transform doc:name="ErrorMsg" doc:id="a7ac32f1-c003-42fe-9063-9ea9e3a5be8c" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+"transactionId": vars.tid,	
+"errorDescription": error.description default (error.detailedDescription default ""),
+"errorCause": error.errorMessage.payload default "",
+"errorStage" : error.failingComponent default "",
+"statusCode" : error.cause.errorMessage.attributes.statusCode default "",
+"reasonPhrase" : error.cause.errorMessage.attributes.reasonPhrase default ""
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<logger level="ERROR" doc:name="ErrorLogger" doc:id="10056c82-24df-4726-a627-ee55587396f6" message="#[payload]"/>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+</mule>

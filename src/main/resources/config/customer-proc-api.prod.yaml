@@ -1,0 +1,54 @@
+http:
+  host: "localhost"
+  port: "8082"
+  listner:
+    conn:
+      timeout: "30000"  
+
+#Exceptions
+api:
+  response:
+    badRequest:
+      code: "400"
+      message: "Bad Request"
+    resourceNotFound:
+      code: "404"
+      message: "Resource Not Found"
+    methodNotAllowed:
+      code: "405"
+      message: "Method Not Allowed"
+    notAcceptable:
+      code: "406"
+      message: "Not Acceptable"
+    unsupportedMediaType:
+      code: "415"
+      message: "Unsupported Media Type"
+    notImplemented:
+      code: "501"
+      message: "Not Implemented"
+    internalServerError:
+      code: "500"
+      message: "Internal server"
+
+salesforce:
+  username: "pooja.singh3@iqvia.com"
+  password: "Iqvia@123"
+  securityToken: "ZlOPZEjWDqCrXQiKcEb9vxtpg"
+  authURL: "https://login.salesforce.com/services/Soap/u/48.0"
+  frequency: "2000"
+  reconnAttmpts: "3"  
+
+deleteBatchSize: "10000"
+idLimit: "200"
+id:
+  ParallelForEachMaxConcurrency: "50"
+                        
+apiId: "17807659"     
+       
+#Os Flow Cron Expression
+os:
+  cron:
+    job: "0 0 0/12 ? * * *"
+  time:
+    zone: "EST"      
+                                     
