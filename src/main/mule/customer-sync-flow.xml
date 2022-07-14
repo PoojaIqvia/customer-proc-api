@@ -10,7 +10,7 @@ http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mu
 	<flow name="customer-sync-flowFlow" doc:id="f05c4d05-ff22-4bb5-bac7-25d172140f44" >
 		<scheduler doc:name="PeriodicSync" doc:id="cf9ead59-565e-4ec4-b7cb-9e5c9d9883cb" >
 			<scheduling-strategy >
-				<fixed-frequency frequency="10" timeUnit="DAYS" startDelay="220"/>
+				<cron expression="${os.cron.job}" timeZone="${os.time.zone}"/>
 			</scheduling-strategy>
 		</scheduler>
 		<os:retrieve doc:name="Retrieve lastUpdateTimestamp" doc:id="fbca686c-9727-455c-9bb4-2bf1bb4e0ce6" key="lastUpdateTimestampKey" target="lastUpdateTimestamp" targetValue="#[payload as String]">
